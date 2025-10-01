@@ -1,0 +1,37 @@
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  position: relative;
+  box-sizing: border-box;
+  background: linear-gradient(0deg, rgba(59,130,246,1) 0%, rgba(99,102,241,1) 50%, rgba(96,165,250,0.1) 51%);
+  animation: spinner-rotate 1s linear infinite;
+  filter: drop-shadow(0 2px 6px rgba(99,102,241,0.25));
+}
+
+.spinner::before,
+.spinner::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+}
+
+.spinner::before {
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.2));
+  mix-blend-mode: overlay;
+}
+
+.spinner::after {
+  border-radius: 50%;
+  background: conic-gradient(from 180deg at 50% 50%, rgba(255,255,255,0.15), rgba(255,255,255,0));
+}
+
+@keyframes spinner-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Smaller tweaks for inline usage */
+.inline {
+  vertical-align: middle;
+}
