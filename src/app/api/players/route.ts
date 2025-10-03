@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,13 +54,11 @@ export async function GET(request: NextRequest) {
         const stats = await prisma.appearance.aggregate({
           where: { playerId: player.id },
           _sum: {
-            minutes: true,
             goals: true,
             assists: true,
           },
           _count: {
             _all: true,
-            motm: true,
           },
         });
 
@@ -77,11 +73,9 @@ export async function GET(request: NextRequest) {
 
         const totalGoals = stats._sum?.goals || 0;
         const totalAssists = stats._sum?.assists || 0;
-        const totalMinutes = stats._sum?.minutes || 0;
         const totalYellowCards = cardStats._count?.yellow || 0;
         const totalRedCards = cardStats._count?.red || 0;
         const totalAppearances = stats._count?._all || 0;
-        const motmCount = stats._count?.motm || 0;
 
         return {
           ...player,
@@ -91,9 +85,7 @@ export async function GET(request: NextRequest) {
             assists: totalAssists,
             yellowCards: totalYellowCards,
             redCards: totalRedCards,
-            motm: motmCount,
             goalsPerMatch: totalAppearances > 0 ? (totalGoals / totalAppearances).toFixed(2) : '0.00',
-            minutesPlayed: totalMinutes,
           },
         };
       })
@@ -103,5 +95,56 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Players API error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { fullName, nickname, position, birthDate, bio, dorsal } = body;
+
+    // Validaciones básicas
+    if (!fullName?.trim()) {
+      return NextResponse.json({ error: 'El nombre completo es requerido' }, { status: 400 });
+    }
+
+    if (!position) {
+      return NextResponse.json({ error: 'La posición es requerida' }, { status: 400 });
+    }
+
+    // Crear el jugador paso a paso
+    const playerData: any = {
+      fullName: fullName.trim(),
+      position: position,
+    };
+
+    // Agregar campos opcionales solo si existen
+    if (nickname?.trim()) {
+      playerData.nickname = nickname.trim();
+    }
+
+    if (bio?.trim()) {
+      playerData.bio = bio.trim();
+    }
+
+    if (birthDate) {
+      playerData.birthDate = new Date(birthDate);
+    }
+
+    if (dorsal) {
+      playerData.dorsal = parseInt(dorsal);
+    }
+
+    const player = await prisma.player.create({
+      data: playerData,
+    });
+
+    return NextResponse.json(player, { status: 201 });
+  } catch (error) {
+    console.error('Error creating player:', error);
+    return NextResponse.json({ 
+      error: 'Error al crear el jugador',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

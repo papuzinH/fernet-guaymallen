@@ -2,24 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import Loader from '@/components/ui/Loader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
+import { motion } from 'framer-motion';
+import Loader from '@/components/ui/modern-loader';
+import { ModernMatchDetailHeader } from '@/components/ui/modern-match-detail-header';
+import { ModernMatchTabs } from '@/components/ui/modern-match-tabs';
 
 interface Match {
   id: number;
   date: string;
   opponent: string;
+  location?: string;
   ourScore: number;
   theirScore: number;
   result: string;
+  notes?: string;
   tournament?: {
     name: string;
-    season: string;
+    organizer?: string | null;
   };
   appearances: Appearance[];
   stats: MatchStats;
@@ -29,15 +28,14 @@ interface Appearance {
   id: number;
   player: {
     id: number;
-    name: string;
+    fullName: string;
     position: string;
   };
+  isStarter: boolean;
   goals: number;
   assists: number;
-  minutesPlayed: number;
-  yellowCards: number;
-  redCards: number;
-  rating?: number;
+  yellow: boolean;
+  red: boolean;
 }
 
 interface MatchStats {
@@ -52,6 +50,7 @@ export default function MatchDetailPage() {
   const params = useParams();
   const matchId = params.id as string;
   const [match, setMatch] = useState<Match | null>(null);
+  const [stats, setStats] = useState<MatchStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,7 +62,8 @@ export default function MatchDetailPage() {
     try {
       const response = await fetch(`/api/matches/${matchId}`);
       const data = await response.json();
-      setMatch(data);
+      setMatch(data.match);
+      setStats(data.stats);
     } catch (error) {
       console.error('Error fetching match:', error);
     } finally {
@@ -71,261 +71,121 @@ export default function MatchDetailPage() {
     }
   };
 
-  const getResultColor = (result: string) => {
-    switch (result) {
-      case 'WIN': return 'bg-green-500';
-      case 'DRAW': return 'bg-yellow-500';
-      case 'LOSS': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="text-center py-8">
+      <div className="min-h-screen gradient-blue flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6 }}
+        >
           <Loader size="large" text="Cargando partido..." />
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   if (!match) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="text-center py-8">Partido no encontrado</div>
+      <div className="min-h-screen gradient-blue flex items-center justify-center">
+        <motion.div
+          className="glass-morphism rounded-3xl p-12 text-center border border-white/20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="text-6xl mb-4">❌</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Partido no encontrado</h2>
+          <p className="text-white/70">El partido que buscas no existe o ha sido eliminado.</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Detalle del Partido</h1>
-        <Button asChild variant="outline">
-          <Link href="/matches">← Volver a Partidos</Link>
-        </Button>
+    <div className="min-h-screen gradient-blue relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Large Floating Orbs */}
+        {[...Array(3)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-96 h-96 rounded-full opacity-5"
+            style={{
+              left: `${10 + i * 40}%`,
+              top: `${20 + i * 30}%`,
+              background: `radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent)`
+            }}
+            animate={{
+              y: [-50, 50, -50],
+              x: [-30, 30, -30],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{
+              duration: 8 + i * 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 2,
+            }}
+          />
+        ))}
+
+        {/* Ambient Particles */}
+        {[...Array(20)].map((_, i) => {
+          // Use fixed positions based on index to avoid hydration mismatch
+          const positions = [
+            { left: 8, top: 12 }, { left: 22, top: 8 }, { left: 38, top: 18 },
+            { left: 52, top: 6 }, { left: 68, top: 16 }, { left: 82, top: 22 },
+            { left: 12, top: 32 }, { left: 28, top: 35 }, { left: 42, top: 28 },
+            { left: 58, top: 38 }, { left: 72, top: 32 }, { left: 88, top: 35 },
+            { left: 18, top: 52 }, { left: 32, top: 58 }, { left: 48, top: 62 },
+            { left: 62, top: 55 }, { left: 78, top: 58 }, { left: 92, top: 62 },
+            { left: 4, top: 45 }, { left: 15, top: 68 }
+          ];
+          const pos = positions[i] || { left: 50, top: 50 };
+          
+          return (
+            <motion.div
+              key={`ambient-${i}`}
+              className="absolute w-1 h-1 bg-white/20 rounded-full"
+              style={{
+                left: `${pos.left}%`,
+                top: `${pos.top}%`,
+              }}
+              animate={{
+                y: [-20, 20, -20],
+                opacity: [0.1, 0.4, 0.1],
+                scale: [0.5, 1, 0.5],
+              }}
+              transition={{
+                duration: 6 + (i % 4),
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: i * 0.2,
+              }}
+            />
+          );
+        })}
       </div>
 
-      {/* Match Summary */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>{match.opponent}</span>
-            <Badge className={getResultColor(match.result)}>
-              {match.result}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Fecha</p>
-              <p className="font-medium">{new Date(match.date).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Torneo</p>
-              <p className="font-medium">
-                {match.tournament ? `${match.tournament.name} ${match.tournament.season}` : '-'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Marcador</p>
-              <p className="font-medium text-lg">{match.ourScore} - {match.theirScore}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Main Content */}
+      <div className="container mx-auto p-4 relative z-10">
+        {/* Modern Header */}
+        <ModernMatchDetailHeader match={match} className="mb-8" />
 
-      {/* Tabs for detailed information */}
-      <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="summary">Resumen</TabsTrigger>
-          <TabsTrigger value="lineup">Alineación</TabsTrigger>
-          <TabsTrigger value="stats">Estadísticas</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="summary">
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumen del Partido</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold mb-2">Estadísticas Generales</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Goles totales:</span>
-                      <span className="font-medium">{match.stats.totalGoals}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Asistencias:</span>
-                      <span className="font-medium">{match.stats.totalAssists}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tarjetas amarillas:</span>
-                      <span className="font-medium">{match.stats.totalYellowCards}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tarjetas rojas:</span>
-                      <span className="font-medium">{match.stats.totalRedCards}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Calificación promedio:</span>
-                      <span className="font-medium">{match.stats.averageRating}</span>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Goleadores</h3>
-                  <div className="space-y-1">
-                    {/* Safely handle appearances possibly being undefined or empty */}
-                    {(() => {
-                      const appearances = match.appearances || [];
-                      const scorers = appearances.filter(app => (app?.goals ?? 0) > 0).sort((a, b) => (b.goals ?? 0) - (a.goals ?? 0));
-                      if (scorers.length === 0) {
-                        return <p className="text-gray-500">Sin goles</p>;
-                      }
-                      return scorers.map(app => (
-                        <div key={app.id} className="flex justify-between">
-                          <span>{app.player?.name ?? '—'}</span>
-                          <span className="font-medium">{app.goals} gol{app.goals !== 1 ? 'es' : ''}</span>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="lineup">
-          <Card>
-            <CardHeader>
-              <CardTitle>Alineación y Rendimiento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Jugador</TableHead>
-                    <TableHead>Posición</TableHead>
-                    <TableHead>Minutos</TableHead>
-                    <TableHead>Goles</TableHead>
-                    <TableHead>Asistencias</TableHead>
-                    <TableHead>Tarjetas</TableHead>
-                    <TableHead>Calificación</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(() => {
-                    const appearances = match.appearances || [];
-                    if (appearances.length === 0) {
-                      return (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center text-gray-500">No hay datos de alineación</TableCell>
-                        </TableRow>
-                      );
-                    }
-                    return appearances.map((appearance) => (
-                      <TableRow key={appearance.id}>
-                        <TableCell className="font-medium">{appearance.player?.name ?? '—'}</TableCell>
-                        <TableCell>{appearance.player?.position ?? '-'}</TableCell>
-                        <TableCell>{appearance.minutesPlayed}'</TableCell>
-                        <TableCell>{appearance.goals}</TableCell>
-                        <TableCell>{appearance.assists}</TableCell>
-                        <TableCell>
-                          {appearance.yellowCards > 0 && <Badge variant="outline" className="mr-1">A{appearance.yellowCards}</Badge>}
-                          {appearance.redCards > 0 && <Badge variant="destructive">R{appearance.redCards}</Badge>}
-                        </TableCell>
-                        <TableCell>{appearance.rating ? appearance.rating.toFixed(1) : '-'}</TableCell>
-                      </TableRow>
-                    ));
-                  })()}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="stats">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Estadísticas de Goles</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total de goles:</span>
-                    <span className="text-2xl font-bold">{match.stats.totalGoals}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Goleadores</h4>
-                    {(() => {
-                      const appearances = match.appearances || [];
-                      const scorers = appearances.filter(app => (app?.goals ?? 0) > 0).sort((a, b) => (b.goals ?? 0) - (a.goals ?? 0));
-                      const maxGoals = scorers.length > 0 ? Math.max(...scorers.map(a => a.goals ?? 0)) : 1;
-                      return scorers.map(app => (
-                        <div key={app.id} className="flex justify-between py-1">
-                          <span>{app.player?.name ?? '—'}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full"
-                                style={{ width: `${((app.goals ?? 0) / maxGoals) * 100}%` }}
-                              ></div>
-                            </div>
-                            <span className="font-medium w-8 text-right">{app.goals}</span>
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Estadísticas de Asistencias</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Total de asistencias:</span>
-                    <span className="text-2xl font-bold">{match.stats.totalAssists}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Asistidores</h4>
-                    {(() => {
-                      const appearances = match.appearances || [];
-                      const assisters = appearances.filter(app => (app?.assists ?? 0) > 0).sort((a, b) => (b.assists ?? 0) - (a.assists ?? 0));
-                      const maxAssists = assisters.length > 0 ? Math.max(...assisters.map(a => a.assists ?? 0)) : 1;
-                      return assisters.map(app => (
-                        <div key={app.id} className="flex justify-between py-1">
-                          <span>{app.player?.name ?? '—'}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-green-600 h-2 rounded-full"
-                                style={{ width: `${((app.assists ?? 0) / maxAssists) * 100}%` }}
-                              ></div>
-                            </div>
-                            <span className="font-medium w-8 text-right">{app.assists}</span>
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+        {/* Modern Tabs */}
+        <ModernMatchTabs
+          appearances={match.appearances}
+          stats={stats || {
+            totalGoals: 0,
+            totalAssists: 0,
+            totalYellowCards: 0,
+            totalRedCards: 0,
+            averageRating: 0
+          }}
+        />
+      </div>
     </div>
   );
 }

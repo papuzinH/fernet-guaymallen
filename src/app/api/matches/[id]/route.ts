@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
@@ -35,9 +33,9 @@ export async function GET(
     const stats = {
       totalGoals: match.appearances.reduce((sum, app) => sum + app.goals, 0),
       totalAssists: match.appearances.reduce((sum, app) => sum + (app.assists || 0), 0),
-      yellowCards: match.appearances.filter(app => app.yellow).length,
-      redCards: match.appearances.filter(app => app.red).length,
-      motm: match.appearances.find(app => app.motm)?.player?.fullName || null,
+      totalYellowCards: match.appearances.filter(app => app.yellow).length,
+      totalRedCards: match.appearances.filter(app => app.red).length,
+      averageRating: 0, // Placeholder - no rating system implemented yet
     };
 
     return NextResponse.json({ match, stats });

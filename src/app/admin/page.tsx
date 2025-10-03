@@ -1,75 +1,78 @@
-"use client";
+'use client';
 
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import ModernAdminHeader from '@/components/ui/modern-admin-header';
+import ModernAdminDashboard from '@/components/ui/modern-admin-dashboard';
 
 export default function Admin() {
-  const [loading, setLoading] = useState(false);
-
-  const handleCreateTournament = async () => {
-    const name = prompt('Nombre del torneo:');
-    if (!name) return;
-    const season = prompt('Temporada (ej: 2024):') || '';
-    try {
-      setLoading(true);
-      const res = await fetch('/api/tournaments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, season }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error creando torneo');
-      toast.success('Torneo creado');
-    } catch (err) {
-      console.error(err);
-      toast.error('No se pudo crear el torneo');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = async () => {
-    if (!confirm('Confirmar: esto borrará jugadores, partidos, apariciones y torneos.')) return;
-    try {
-      setLoading(true);
-      const res = await fetch('/api/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Reset failed');
-      toast.success('Datos reseteados');
-    } catch (err) {
-      console.error(err);
-      toast.error('No se pudo resetear la base');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Admin</h1>
-      <p>Panel de administracin.</p>
-      <div className="mt-4 space-x-4">
-        <Button asChild>
-          <Link href="/admin/new-match">Nuevo Partido</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/admin/import">Importar Datos</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/admin/theme">Configurar Theme</Link>
-        </Button>
-        <Button onClick={handleCreateTournament} disabled={loading}>
-          Crear Torneo
-        </Button>
-        <Button variant="destructive" onClick={handleReset} disabled={loading}>
-          Resetear Datos
-        </Button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Animated Orbs */}
+        {[...Array(3)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-96 h-96 rounded-full opacity-20 blur-3xl"
+            style={{
+              background: `radial-gradient(circle, rgba(${i === 0 ? '59, 130, 246' : i === 1 ? '139, 92, 246' : '239, 68, 68'}, 0.3), transparent)`,
+              left: `${20 + i * 30}%`,
+              top: `${10 + i * 20}%`,
+            }}
+            animate={{
+              x: [-50, 50, -50],
+              y: [-30, 30, -30],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{
+              duration: 20 + i * 5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+
+        {/* Ambient Particles */}
+        {[...Array(15)].map((_, i) => {
+          // Use fixed positions based on index to avoid hydration mismatch
+          const positions = [
+            { left: 5, top: 10 }, { left: 15, top: 5 }, { left: 25, top: 15 },
+            { left: 35, top: 8 }, { left: 45, top: 12 }, { left: 55, top: 6 },
+            { left: 65, top: 18 }, { left: 75, top: 10 }, { left: 85, top: 14 },
+            { left: 95, top: 8 }, { left: 8, top: 25 }, { left: 18, top: 30 },
+            { left: 28, top: 22 }, { left: 38, top: 28 }, { left: 48, top: 25 }
+          ];
+          const pos = positions[i] || { left: 50, top: 50 };
+          
+          return (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-white/20 rounded-full"
+              style={{
+                left: `${pos.left}%`,
+                top: `${pos.top}%`,
+              }}
+              animate={{
+                y: [-20, 20, -20],
+                x: [-10, 10, -10],
+                opacity: [0.2, 0.8, 0.2],
+                scale: [0.5, 1.2, 0.5],
+              }}
+              transition={{
+                duration: 4 + (i % 3),
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: i * 0.2,
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10">
+        <ModernAdminHeader />
+        <ModernAdminDashboard />
       </div>
     </div>
   );

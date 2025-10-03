@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // Goals by month chart data
 export async function GET(request: NextRequest) {
@@ -70,35 +68,35 @@ async function getGoalsByMonth() {
   return chartData;
 }
 
-// Results by season data
+// Results by tournament data
 async function getResultsBySeason() {
   const matches = await prisma.match.findMany({
     select: {
       result: true,
       tournament: {
         select: {
-          season: true,
+          name: true,
         },
       },
     },
   });
 
-  const seasonResults: { [key: string]: { WIN: number; DRAW: number; LOSS: number } } = {};
+  const tournamentResults: { [key: string]: { WIN: number; DRAW: number; LOSS: number } } = {};
 
   matches.forEach(match => {
-    const season = match.tournament?.season || 'Sin Temporada';
+    const tournament = match.tournament?.name || 'Sin Torneo';
 
-    if (!seasonResults[season]) {
-      seasonResults[season] = { WIN: 0, DRAW: 0, LOSS: 0 };
+    if (!tournamentResults[tournament]) {
+      tournamentResults[tournament] = { WIN: 0, DRAW: 0, LOSS: 0 };
     }
 
-    seasonResults[season][match.result as keyof typeof seasonResults[string]]++;
+    tournamentResults[tournament][match.result as keyof typeof tournamentResults[string]]++;
   });
 
   // Convert to array format suitable for stacked bar chart
-  const chartData = Object.entries(seasonResults)
-    .map(([season, results]) => ({
-      season,
+  const chartData = Object.entries(tournamentResults)
+    .map(([tournament, results]) => ({
+      season: tournament, // Keep the same key name for frontend compatibility
       wins: results.WIN,
       draws: results.DRAW,
       losses: results.LOSS,

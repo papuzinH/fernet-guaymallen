@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -65,6 +63,41 @@ export async function GET() {
       },
     });
 
+    // Top players (by goals + assists)
+    const topPlayers = await prisma.player.findMany({
+      where: { isActive: true },
+      include: {
+        appearances: {
+          select: {
+            goals: true,
+            assists: true,
+          },
+        },
+      },
+      take: 6,
+    });
+
+    const playersWithStats = topPlayers.map(player => {
+      const stats = player.appearances.reduce(
+        (acc, app) => ({
+          goals: acc.goals + app.goals,
+          assists: acc.assists + (app.assists || 0),
+          appearances: acc.appearances + 1,
+        }),
+        { goals: 0, assists: 0, appearances: 0 }
+      );
+
+      return {
+        id: player.id,
+        fullName: player.fullName,
+        nickname: player.nickname,
+        position: player.position,
+        dorsal: player.dorsal,
+        photoUrl: player.photoUrl,
+        stats,
+      };
+    }).sort((a, b) => (b.stats.goals + b.stats.assists) - (a.stats.goals + a.stats.assists));
+
     return NextResponse.json({
       totalMatches,
       wdl,
@@ -73,6 +106,7 @@ export async function GET() {
       topScorer: topScorerName,
       streak,
       last5Matches: last5,
+      topPlayers: playersWithStats,
     });
   } catch (error) {
     console.error('Stats API error:', error);
@@ -85,6 +119,7 @@ export async function GET() {
       topScorer: null,
       streak: [],
       last5Matches: [],
+      topPlayers: [],
     });
   }
 }

@@ -1,15 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import Loader from '@/components/ui/Loader';
-import { TrendingUp, TrendingDown, Minus, Trophy, Medal, Award, Crown } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { GoalIcon, AssistIcon, YellowCardIcon, FootballIcon } from '@/components/icons/football';
+import { motion, AnimatePresence } from 'framer-motion';
+import Loader from '@/components/ui/modern-loader';
+import ModernTabs from '@/components/ui/modern-tabs';
+import ModernRankingCard from '@/components/ui/modern-ranking-card';
+import ModernRankingsHeader from '@/components/ui/modern-rankings-header';
+import ModernChartsSection from '@/components/ui/modern-charts-section';
+import { GoalIcon, AppearanceIcon, AssistIcon, FairPlayIcon, PerformanceIcon } from '@/components/icons/rankings';
 
 interface RankingPlayer {
   id: number;
@@ -41,36 +39,41 @@ const rankingConfigs = {
     title: 'GOLEADORES',
     label: 'Goles',
     icon: GoalIcon,
-    color: 'text-red-400',
-    bgColor: 'from-red-500/20 to-red-600/20'
+    color: '#ef4444',
+    gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1))',
+    glowColor: '#ef4444'
   },
   appearances: {
     title: 'PRESENCIAS',
     label: 'Partidos',
-    icon: FootballIcon,
-    color: 'text-blue-400',
-    bgColor: 'from-blue-500/20 to-blue-600/20'
+    icon: AppearanceIcon,
+    color: '#3b82f6',
+    gradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1))',
+    glowColor: '#3b82f6'
   },
   assists: {
     title: 'ASISTENCIAS',
     label: 'Pases Gol',
     icon: AssistIcon,
-    color: 'text-green-400',
-    bgColor: 'from-green-500/20 to-green-600/20'
+    color: '#10b981',
+    gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1))',
+    glowColor: '#10b981'
   },
   fairplay: {
     title: 'FAIR PLAY',
     label: 'Tarjetas/Partido',
-    icon: YellowCardIcon,
-    color: 'text-yellow-400',
-    bgColor: 'from-yellow-500/20 to-yellow-600/20'
+    icon: FairPlayIcon,
+    color: '#f59e0b',
+    gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1))',
+    glowColor: '#f59e0b'
   },
   performance: {
     title: 'RENDIMIENTO',
     label: 'Puntos/Partido',
-    icon: Trophy,
-    color: 'text-purple-400',
-    bgColor: 'from-purple-500/20 to-purple-600/20'
+    icon: PerformanceIcon,
+    color: '#8b5cf6',
+    gradient: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.1))',
+    glowColor: '#8b5cf6'
   }
 };
 
@@ -89,9 +92,19 @@ export default function RankingsPage() {
     try {
       // Fetch all rankings
       const rankingTypes = ['goals', 'appearances', 'assists', 'fairplay', 'performance'];
-      const rankingsPromises = rankingTypes.map(type =>
-        fetch(`/api/rankings?type=${type}&limit=10`).then(res => res.json())
-      );
+      const rankingsPromises = rankingTypes.map(async type => {
+        try {
+          const response = await fetch(`/api/rankings?type=${type}&limit=10`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          return Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.error(`Error fetching ${type} rankings:`, error);
+          return [];
+        }
+      });
 
       const rankingsResults = await Promise.all(rankingsPromises);
       const rankingsData: { [key: string]: RankingPlayer[] } = {};
@@ -101,9 +114,19 @@ export default function RankingsPage() {
 
       // Fetch chart data
       const chartTypes = ['goals-by-month', 'results-by-season'];
-      const chartsPromises = chartTypes.map(type =>
-        fetch(`/api/charts?type=${type}`).then(res => res.json())
-      );
+      const chartsPromises = chartTypes.map(async type => {
+        try {
+          const response = await fetch(`/api/charts?type=${type}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          return Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.error(`Error fetching ${type} chart:`, error);
+          return [];
+        }
+      });
 
       const chartsResults = await Promise.all(chartsPromises);
       const chartsDataObj: { [key: string]: ChartData[] } = {};
@@ -120,177 +143,134 @@ export default function RankingsPage() {
     }
   };
 
-  const getPositionColor = (position: string) => {
-    switch (position) {
-      case 'GK': return 'bg-yellow-500';
-      case 'DEF': return 'bg-blue-500';
-      case 'MID': return 'bg-green-500';
-      case 'FW': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getPositionName = (position: string) => {
-    switch (position) {
-      case 'GK': return 'ARQ';
-      case 'DEF': return 'DEF';
-      case 'MID': return 'MED';
-      case 'FW': return 'DEL';
-      default: return position;
-    }
-  };
-
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'up': return <TrendingUp className="w-4 h-4 text-green-400" />;
-      case 'down': return <TrendingDown className="w-4 h-4 text-red-400" />;
-      default: return <Minus className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1: return <Crown className="w-6 h-6 text-yellow-400" />;
-      case 2: return <Medal className="w-6 h-6 text-gray-400" />;
-      case 3: return <Award className="w-6 h-6 text-amber-600" />;
-      default: return null;
-    }
-  };
 
   const renderRankingTable = (data: RankingPlayer[], type: string) => {
     const config = rankingConfigs[type as keyof typeof rankingConfigs];
-    const IconComponent = config.icon;
+
+    // Ensure data is an array
+    if (!Array.isArray(data) || data.length === 0) {
+      return (
+        <motion.div
+          className="text-center py-16"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="glass-morphism rounded-2xl p-12 max-w-md mx-auto">
+            <div className="text-6xl mb-4">📊</div>
+            <p className="text-white/70 text-lg">No hay datos disponibles</p>
+            <p className="text-white/50 text-sm mt-2">Los rankings aparecerán cuando se registren partidos</p>
+          </div>
+        </motion.div>
+      );
+    }
 
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="space-y-6"
+        className="space-y-8"
       >
-        {/* Header */}
-        <div className={`bg-gradient-to-r ${config.bgColor} rounded-2xl p-8 text-center border-2 border-white/20`}>
+        {/* Modern Header */}
+        <motion.div
+          className="relative glass-morphism rounded-3xl p-8 text-center border-2 border-white/20 overflow-hidden"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          {/* Background Glow */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mb-4"
-          >
-            <IconComponent className={`w-16 h-16 mx-auto ${config.color}`} />
-          </motion.div>
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-4xl font-heading text-white mb-2"
-          >
-            {config.title}
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="text-white/70 text-lg"
-          >
-            Ranking por {config.label.toLowerCase()}
-          </motion.p>
-        </div>
+            className="absolute inset-0 rounded-3xl opacity-20 blur-xl"
+            style={{ backgroundColor: config.glowColor }}
+            animate={{
+              opacity: [0.1, 0.3, 0.1],
+              scale: [1, 1.05, 1],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+
+          {/* Floating Particles */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+            {[...Array(8)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-white/30 rounded-full"
+                style={{
+                  left: `${10 + i * 12}%`,
+                  top: `${20 + (i % 3) * 20}%`,
+                }}
+                animate={{
+                  y: [-15, 15, -15],
+                  opacity: [0.2, 0.8, 0.2],
+                  scale: [0.5, 1, 0.5],
+                }}
+                transition={{
+                  duration: 3 + i * 0.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: i * 0.2,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="relative z-10">
+            <motion.div
+              className="mb-6"
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, type: "spring", stiffness: 200 }}
+            >
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-white/20 to-white/10 rounded-2xl flex items-center justify-center border border-white/20">
+                <config.icon className={`w-10 h-10 ${config.color}`} />
+              </div>
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-5xl font-bold text-white mb-3"
+              style={{
+                background: "linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text"
+              }}
+            >
+              {config.title}
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="text-white/70 text-xl"
+            >
+              Ranking por {config.label.toLowerCase()}
+            </motion.p>
+          </div>
+        </motion.div>
 
         {/* Rankings List */}
-        <div className="space-y-4">
-          {data.map((player, index) => {
-            const rank = index + 1;
-            const isTop3 = rank <= 3;
-
-            return (
-              <motion.div
+        <div className="space-y-6">
+          <AnimatePresence mode="wait">
+            {data.map((player, index) => (
+              <ModernRankingCard
                 key={player.id}
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
-                  isTop3
-                    ? 'border-yellow-400/50 bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 shadow-lg'
-                    : 'border-white/20 bg-card/80 hover:border-white/30'
-                }`}
-              >
-                {/* Rank Badge */}
-                <div className="absolute top-4 left-4 z-10">
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full font-heading text-2xl font-bold ${
-                    rank === 1 ? 'bg-yellow-400 text-black' :
-                    rank === 2 ? 'bg-gray-400 text-white' :
-                    rank === 3 ? 'bg-amber-600 text-white' :
-                    'bg-white/20 text-white'
-                  }`}>
-                    {rank}
-                  </div>
-                </div>
-
-                {/* Rank Icon for Top 3 */}
-                {isTop3 && (
-                  <div className="absolute top-4 right-4 z-10">
-                    {getRankIcon(rank)}
-                  </div>
-                )}
-
-                <div className="p-6 pl-20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      {/* Player Info */}
-                      <div>
-                        <h3 className="text-xl font-bold text-white">{player.name}</h3>
-                        {player.nickname && (
-                          <p className="text-white/70">"{player.nickname}"</p>
-                        )}
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Badge className={getPositionColor(player.position)}>
-                            {getPositionName(player.position)}
-                          </Badge>
-                          {player.dorsal && (
-                            <span className="text-white/60">#{player.dorsal}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="text-right">
-                      <div className="text-4xl font-heading text-white mb-1">
-                        {player.displayValue || player.value}
-                      </div>
-                      <div className="text-white/60 text-sm">
-                        {config.label}
-                        {player.average && (
-                          <span className="block">({player.average}/partido)</span>
-                        )}
-                      </div>
-                      <div className="flex justify-end mt-2">
-                        {getTrendIcon(player.trend)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar for Top 3 */}
-                {isTop3 && (
-                  <div className="px-6 pb-4">
-                    <div className="w-full bg-white/20 rounded-full h-2">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(player.value / Math.max(...data.slice(0, 3).map(p => p.value))) * 100}%` }}
-                        transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                        className={`h-2 rounded-full ${
-                          rank === 1 ? 'bg-yellow-400' :
-                          rank === 2 ? 'bg-gray-400' :
-                          'bg-amber-600'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
+                player={player}
+                rank={index + 1}
+                type={type}
+                color={config.color}
+                glowColor={config.glowColor}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       </motion.div>
     );
@@ -305,137 +285,100 @@ export default function RankingsPage() {
   }
 
   return (
-    <div className="min-h-screen gradient-blue">
-      {/* Header */}
-      <motion.section
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="text-center py-16 px-4"
-      >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-6"
-        >
-          <Trophy className="w-20 h-20 text-yellow-400 mx-auto" />
-        </motion.div>
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-6xl font-heading text-white mb-4"
-        >
-          RANKINGS
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-xl text-white/80 max-w-2xl mx-auto"
-        >
-          Los mejores jugadores del club en diferentes categorías
-        </motion.p>
-      </motion.section>
+    <div className="min-h-screen gradient-blue relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Large Floating Orbs */}
+        {[...Array(3)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-96 h-96 rounded-full opacity-5"
+            style={{
+              left: `${10 + i * 40}%`,
+              top: `${20 + i * 30}%`,
+              background: `radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent)`
+            }}
+            animate={{
+              y: [-50, 50, -50],
+              x: [-30, 30, -30],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{
+              duration: 8 + i * 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 2,
+            }}
+          />
+        ))}
+
+        {/* Ambient Particles */}
+        {[...Array(15)].map((_, i) => (
+          <motion.div
+            key={`ambient-${i}`}
+            className="absolute w-1 h-1 bg-white/20 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [-20, 20, -20],
+              opacity: [0.1, 0.4, 0.1],
+              scale: [0.5, 1, 0.5],
+            }}
+            transition={{
+              duration: 6 + Math.random() * 4,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: Math.random() * 3,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Modern Header */}
+      <ModernRankingsHeader />
 
       {/* Rankings Tabs */}
-      <section className="px-4 pb-20">
-        <div className="container mx-auto max-w-4xl">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-8 bg-white/10 border border-white/20">
-              {Object.entries(rankingConfigs).map(([key, config]) => {
-                const IconComponent = config.icon;
-                return (
-                  <TabsTrigger
-                    key={key}
-                    value={key}
-                    className="flex flex-col items-center gap-2 py-4 data-[state=active]:bg-white/20 data-[state=active]:text-white"
-                  >
-                    <IconComponent className="w-5 h-5" />
-                    <span className="text-xs font-heading">{config.title}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-
-            {Object.keys(rankingConfigs).map((type) => (
-              <TabsContent key={type} value={type}>
-                {renderRankingTable(rankings[type] || [], type)}
-              </TabsContent>
-            ))}
-          </Tabs>
-
-          {/* Charts Section */}
+      <section className="px-4 pb-20 relative z-10">
+        <div className="container mx-auto max-w-6xl">
+          {/* Modern Tabs Selector */}
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-16"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="mb-16"
           >
-            {/* Goals by Month Chart */}
-            <Card className="border-2 border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <GoalIcon className="w-5 h-5 text-red-400" />
-                  Goles por Mes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartsData['goals-by-month'] || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis dataKey="month" stroke="#FFFFFF" />
-                    <YAxis stroke="#FFFFFF" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#0D1B4C',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="goals"
-                      stroke="#E53935"
-                      strokeWidth={3}
-                      dot={{ fill: '#E53935', strokeWidth: 2, r: 6 }}
-                      activeDot={{ r: 8, stroke: '#E53935', strokeWidth: 2 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Results by Season Chart */}
-            <Card className="border-2 border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-yellow-400" />
-                  Resultados por Temporada
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartsData['results-by-season'] || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis dataKey="season" stroke="#FFFFFF" />
-                    <YAxis stroke="#FFFFFF" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#0D1B4C',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Bar dataKey="wins" stackId="a" fill="#10b981" name="Victorias" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="draws" stackId="a" fill="#f59e0b" name="Empates" />
-                    <Bar dataKey="losses" stackId="a" fill="#ef4444" name="Derrotas" radius={[0, 0, 2, 2]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <ModernTabs
+              tabs={Object.entries(rankingConfigs).map(([key, config]) => ({
+                id: key,
+                label: config.title,
+                icon: config.icon,
+                color: config.color,
+                gradient: config.gradient,
+                glowColor: config.glowColor
+              }))}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              className="max-w-5xl mx-auto"
+            />
           </motion.div>
+
+          {/* Content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+            >
+              {renderRankingTable(rankings[activeTab] || [], activeTab)}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Modern Charts Section */}
+          <ModernChartsSection chartsData={chartsData} />
         </div>
       </section>
     </div>

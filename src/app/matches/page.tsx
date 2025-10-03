@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import Loader from '@/components/ui/Loader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { motion, AnimatePresence } from 'framer-motion';
+import Loader from '@/components/ui/modern-loader';
+import { ModernMatchesHeader } from '@/components/ui/modern-matches-header';
+import { ModernMatchFilters } from '@/components/ui/modern-match-filters';
+import { ModernMatchCard } from '@/components/ui/modern-match-card';
 
 interface Match {
   id: number;
@@ -18,7 +16,7 @@ interface Match {
   result: string;
   tournament?: {
     name: string;
-    season: string;
+    organizer?: string | null;
   };
 }
 
@@ -35,7 +33,6 @@ export default function MatchesPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     tournament: 'all',
-    season: 'all',
     result: 'all',
   });
 
@@ -79,153 +76,214 @@ export default function MatchesPage() {
     }
   };
 
-  const getUniqueValues = (key: 'tournament' | 'season' | 'result') => {
-    const values = new Set<string>();
+  const getUniqueValues = () => {
+    const tournaments = new Set<string>();
+    const results = new Set<string>();
+    
     matches.forEach(match => {
-      if (key === 'tournament' && match.tournament?.name) {
-        values.add(match.tournament.name);
-      } else if (key === 'season' && match.tournament?.season) {
-        values.add(match.tournament.season);
-      } else if (key === 'result') {
-        values.add(match.result);
+      if (match.tournament?.name) {
+        tournaments.add(match.tournament.name);
       }
+      results.add(match.result);
     });
-    return Array.from(values).sort();
+    
+    return {
+      tournaments: Array.from(tournaments).sort(),
+      results: Array.from(results).sort()
+    };
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Partidos</h1>
+    <div className="min-h-screen gradient-blue relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Large Floating Orbs */}
+        {[...Array(3)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-96 h-96 rounded-full opacity-5"
+            style={{
+              left: `${10 + i * 40}%`,
+              top: `${20 + i * 30}%`,
+              background: `radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent)`
+            }}
+            animate={{
+              y: [-50, 50, -50],
+              x: [-30, 30, -30],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{
+              duration: 8 + i * 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 2,
+            }}
+          />
+        ))}
 
-      {/* Filters */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Torneo</label>
-            <Select value={filters.tournament} onValueChange={(value) => handleFilterChange('tournament', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos los torneos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los torneos</SelectItem>
-                {getUniqueValues('tournament').map(tournament => (
-                  <SelectItem key={tournament} value={tournament}>{tournament}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Ambient Particles */}
+        {[...Array(20)].map((_, i) => {
+          // Use fixed positions based on index to avoid hydration mismatch
+          const positions = [
+            { left: 8, top: 12 }, { left: 22, top: 8 }, { left: 38, top: 18 },
+            { left: 52, top: 6 }, { left: 68, top: 16 }, { left: 82, top: 22 },
+            { left: 12, top: 32 }, { left: 28, top: 35 }, { left: 42, top: 28 },
+            { left: 58, top: 38 }, { left: 72, top: 32 }, { left: 88, top: 35 },
+            { left: 18, top: 52 }, { left: 32, top: 58 }, { left: 48, top: 62 },
+            { left: 62, top: 55 }, { left: 78, top: 58 }, { left: 92, top: 62 },
+            { left: 4, top: 45 }, { left: 15, top: 68 }
+          ];
+          const pos = positions[i] || { left: 50, top: 50 };
+          
+          return (
+            <motion.div
+              key={`ambient-${i}`}
+              className="absolute w-1 h-1 bg-white/20 rounded-full"
+              style={{
+                left: `${pos.left}%`,
+                top: `${pos.top}%`,
+              }}
+              animate={{
+                y: [-20, 20, -20],
+                opacity: [0.1, 0.4, 0.1],
+                scale: [0.5, 1, 0.5],
+              }}
+              transition={{
+                duration: 6 + (i % 4),
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: i * 0.2,
+              }}
+            />
+          );
+        })}
+      </div>
 
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Temporada</label>
-            <Select value={filters.season} onValueChange={(value) => handleFilterChange('season', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas las temporadas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las temporadas</SelectItem>
-                {getUniqueValues('season').map(season => (
-                  <SelectItem key={season} value={season}>{season}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Modern Header */}
+      <ModernMatchesHeader />
 
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Resultado</label>
-            <Select value={filters.result} onValueChange={(value) => handleFilterChange('result', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos los resultados" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los resultados</SelectItem>
-                {getUniqueValues('result').map(result => (
-                  <SelectItem key={result} value={result}>{result}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Main Content */}
+      <section className="px-4 pb-20 relative z-10">
+        <div className="container mx-auto max-w-7xl">
+          {/* Modern Filters */}
+          <motion.div
+            className="mb-12"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <ModernMatchFilters
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              uniqueValues={getUniqueValues()}
+            />
+          </motion.div>
 
-      {/* Matches Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Partidos</CardTitle>
-        </CardHeader>
-        <CardContent>
+          {/* Matches Grid */}
           {loading ? (
-            <div className="text-center py-4"><Loader size="medium" text="Cargando..." /></div>
+            <motion.div
+              className="text-center py-16"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Loader size="large" text="Cargando partidos..." />
+            </motion.div>
           ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Rival</TableHead>
-                    <TableHead>Torneo</TableHead>
-                    <TableHead>Resultado</TableHead>
-                    <TableHead>Marcador</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {matches.map((match) => (
-                    <TableRow key={match.id}>
-                      <TableCell>{new Date(match.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{match.opponent}</TableCell>
-                      <TableCell>
-                        {match.tournament ? `${match.tournament.name} ${match.tournament.season}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getResultColor(match.result)}>
-                          {match.result}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{match.ourScore} - {match.theirScore}</TableCell>
-                      <TableCell>
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/matches/${match.id}`}>Ver Detalle</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+            <AnimatePresence mode="wait">
+              {matches.length > 0 ? (
+                <motion.div
+                  key="matches-grid"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  {matches.map((match, index) => (
+                    <ModernMatchCard
+                      key={match.id}
+                      match={match}
+                      index={index}
+                    />
                   ))}
-                </TableBody>
-              </Table>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="no-matches"
+                  className="text-center py-16"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="glass-morphism rounded-3xl p-12 max-w-md mx-auto">
+                    <div className="text-6xl mb-4">⚽</div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      No se encontraron partidos
+                    </h3>
+                    <p className="text-white/70">
+                      No hay partidos que coincidan con los filtros aplicados.
+                    </p>
+                    <motion.button
+                      className="mt-4 px-6 py-2 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-400/30 hover:bg-blue-500/30 transition-colors"
+                      onClick={() => {
+                        setFilters({ tournament: 'all', result: 'all' });
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Limpiar filtros
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
 
-              {/* Pagination */}
-              <div className="flex justify-between items-center mt-4">
-                <div className="text-sm text-gray-500">
-                  Mostrando {matches.length} de {pagination.total} partidos
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
+          {/* Pagination */}
+          {matches.length > 0 && (
+            <motion.div
+              className="mt-12 flex justify-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <div className="glass-morphism rounded-2xl p-6 border border-white/20">
+                <div className="flex items-center gap-4">
+                  <motion.button
+                    className="px-4 py-2 bg-white/10 text-white rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={pagination.page <= 1}
                     onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Anterior
-                  </Button>
-                  <span className="px-3 py-1 text-sm">
+                  </motion.button>
+                  
+                  <div className="text-white/80 text-sm">
                     Página {pagination.page} de {pagination.pages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  </div>
+                  
+                  <motion.button
+                    className="px-4 py-2 bg-white/10 text-white rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={pagination.page >= pagination.pages}
                     onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Siguiente
-                  </Button>
+                  </motion.button>
+                </div>
+                
+                <div className="text-center text-white/60 text-sm mt-2">
+                  Mostrando {matches.length} de {pagination.total} partidos
                 </div>
               </div>
-            </>
+            </motion.div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

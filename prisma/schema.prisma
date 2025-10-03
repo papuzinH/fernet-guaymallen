@@ -11,11 +11,14 @@ datasource db {
 }
 
 enum Position {
-  GK
-  DEF
-  MID
-  FW
-  OTHER
+  GK                    // Arquero
+  DEF_CENTRAL          // Defensor Central
+  DEF_LATERAL          // Defensor Lateral
+  MID_CENTRAL          // Mediocampista Central
+  VOLANTE              // Volante
+  MID_OFENSIVO         // Mediocampista Ofensivo
+  DELANTERO            // Delantero
+  OTHER                // Otro
 }
 
 enum MatchResult {
@@ -31,6 +34,8 @@ model Player {
   dorsal    Int?
   position  Position
   photoUrl  String?
+  birthDate DateTime?   // Fecha de nacimiento para calcular edad
+  bio       String?     // Mini biografía
   joinedAt  DateTime    @default(now())
   isActive  Boolean     @default(true)
   createdAt DateTime    @default(now())
@@ -42,10 +47,10 @@ model Player {
 }
 
 model Tournament {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   name      String
-  season    String
   organizer String?
+  createdAt DateTime @default(now())
 
   matches Match[]
 
@@ -74,12 +79,10 @@ model Appearance {
   matchId   Int
   playerId  Int
   isStarter Boolean @default(false)
-  minutes   Int?
   goals     Int     @default(0)
-  assists   Int?    @default(0)
+  assists   Int     @default(0)
   yellow    Boolean @default(false)
   red       Boolean @default(false)
-  motm      Boolean @default(false)
 
   match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // Rankings API - returns different types of rankings
 export async function GET(request: NextRequest) {
@@ -242,7 +240,7 @@ async function getFairPlayRanking(limit: number) {
   return rankings;
 }
 
-// Performance ranking (points per match based on goals, assists, MOTM)
+// Performance ranking (points per match based on goals, assists)
 async function getPerformanceRanking(limit: number) {
   const players = await prisma.player.findMany({
     include: {
@@ -250,7 +248,6 @@ async function getPerformanceRanking(limit: number) {
         select: {
           goals: true,
           assists: true,
-          motm: true,
           match: {
             select: {
               date: true,
@@ -267,9 +264,9 @@ async function getPerformanceRanking(limit: number) {
 
       if (appearances === 0) return null;
 
-      // Calculate performance points: goals (3pts), assists (2pts), MOTM (2pts)
+      // Calculate performance points: goals (3pts), assists (2pts)
       const totalPoints = player.appearances.reduce((sum, app) => {
-        return sum + (app.goals * 3) + ((app.assists || 0) * 2) + (app.motm ? 2 : 0);
+        return sum + (app.goals * 3) + ((app.assists || 0) * 2);
       }, 0);
 
       const pointsPerMatch = totalPoints / appearances;
@@ -279,7 +276,7 @@ async function getPerformanceRanking(limit: number) {
         .sort((a, b) => new Date(b.match.date).getTime() - new Date(a.match.date).getTime())
         .slice(0, 5);
       const recentPoints = recentMatches.reduce((sum, app) => {
-        return sum + (app.goals * 3) + ((app.assists || 0) * 2) + (app.motm ? 2 : 0);
+        return sum + (app.goals * 3) + ((app.assists || 0) * 2);
       }, 0);
       const trend = recentPoints > 8 ? 'up' : recentPoints < 3 ? 'down' : 'stable';
 

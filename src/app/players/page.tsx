@@ -1,15 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import Loader from '@/components/ui/Loader';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
+import { motion, AnimatePresence } from 'framer-motion';
+import Loader from '@/components/ui/modern-loader';
+import ModernPlayerCard from '@/components/ui/modern-player-card';
+import ModernPlayersHeader from '@/components/ui/modern-players-header';
+import ModernPlayerFilters from '@/components/ui/modern-player-filters';
 
 interface Player {
   id: number;
@@ -25,7 +21,6 @@ interface Player {
     assists: number;
     yellowCards: number;
     redCards: number;
-    motm: number;
     goalsPerMatch: string;
   };
 }
@@ -51,166 +46,174 @@ export default function PlayersPage() {
 
     try {
       const response = await fetch(`/api/players?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      setPlayers(data);
+      setPlayers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching players:', error);
+      setPlayers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getPositionColor = (position: string) => {
-    switch (position) {
-      case 'GK': return 'bg-yellow-500';
-      case 'DEF': return 'bg-blue-500';
-      case 'MID': return 'bg-green-500';
-      case 'FW': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getPositionName = (position: string) => {
-    switch (position) {
-      case 'GK': return 'Arquero';
-      case 'DEF': return 'Defensor';
-      case 'MID': return 'Mediocampista';
-      case 'FW': return 'Delantero';
-      default: return position;
-    }
-  };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Jugadores</h1>
+    <div className="min-h-screen gradient-blue relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Large Floating Orbs */}
+        {[...Array(3)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-96 h-96 rounded-full opacity-5"
+            style={{
+              left: `${10 + i * 40}%`,
+              top: `${20 + i * 30}%`,
+              background: `radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent)`
+            }}
+            animate={{
+              y: [-50, 50, -50],
+              x: [-30, 30, -30],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{
+              duration: 8 + i * 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 2,
+            }}
+          />
+        ))}
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Buscar por nombre o apodo..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full"
-              />
-            </div>
+        {/* Ambient Particles */}
+        {[...Array(20)].map((_, i) => {
+          // Use fixed positions based on index to avoid hydration mismatch
+          const positions = [
+            { left: 10, top: 20 }, { left: 25, top: 15 }, { left: 40, top: 30 },
+            { left: 55, top: 10 }, { left: 70, top: 25 }, { left: 85, top: 35 },
+            { left: 15, top: 45 }, { left: 30, top: 50 }, { left: 45, top: 40 },
+            { left: 60, top: 55 }, { left: 75, top: 45 }, { left: 90, top: 50 },
+            { left: 20, top: 70 }, { left: 35, top: 75 }, { left: 50, top: 80 },
+            { left: 65, top: 70 }, { left: 80, top: 75 }, { left: 95, top: 80 },
+            { left: 5, top: 60 }, { left: 12, top: 85 }
+          ];
+          const pos = positions[i] || { left: 50, top: 50 };
+          
+          return (
+            <motion.div
+              key={`ambient-${i}`}
+              className="absolute w-1 h-1 bg-white/20 rounded-full"
+              style={{
+                left: `${pos.left}%`,
+                top: `${pos.top}%`,
+              }}
+              animate={{
+                y: [-20, 20, -20],
+                opacity: [0.1, 0.4, 0.1],
+                scale: [0.5, 1, 0.5],
+              }}
+              transition={{
+                duration: 6 + (i % 4),
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: i * 0.2,
+              }}
+            />
+          );
+        })}
+      </div>
 
-            <div className="w-full md:w-48">
-              <Select value={position} onValueChange={setPosition}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Posición" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las posiciones</SelectItem>
-                  <SelectItem value="GK">Arquero</SelectItem>
-                  <SelectItem value="DEF">Defensor</SelectItem>
-                  <SelectItem value="MID">Mediocampista</SelectItem>
-                  <SelectItem value="FW">Delantero</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Modern Header */}
+      <ModernPlayersHeader />
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="activeOnly"
-                checked={activeOnly}
-                onCheckedChange={(checked) => setActiveOnly(checked as boolean)}
-              />
-              <label htmlFor="activeOnly" className="text-sm font-medium">
-                Solo activos
-              </label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Main Content */}
+      <section className="px-4 pb-20 relative z-10">
+        <div className="container mx-auto max-w-7xl">
+          {/* Modern Filters */}
+          <motion.div
+            className="mb-12"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <ModernPlayerFilters
+              search={search}
+              setSearch={setSearch}
+              position={position}
+              setPosition={setPosition}
+              activeOnly={activeOnly}
+              setActiveOnly={setActiveOnly}
+            />
+          </motion.div>
 
-      {/* Players Grid */}
-      {loading ? (
-        <div className="text-center py-8"><Loader size="large" text="Cargando jugadores..." /></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {players.map((player) => (
-            <Card key={player.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  {/* Photo */}
-                  <div className="w-24 h-24 mb-4 rounded-full overflow-hidden bg-gray-200">
-                    {player.photoUrl ? (
-                      <Image
-                        src={player.photoUrl}
-                        alt={player.fullName}
-                        width={96}
-                        height={96}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    )}
+          {/* Players Grid */}
+          {loading ? (
+            <motion.div
+              className="text-center py-16"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Loader size="large" text="Cargando jugadores..." />
+            </motion.div>
+          ) : (
+            <AnimatePresence mode="wait">
+              {players.length > 0 ? (
+                <motion.div
+                  key="players-grid"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  {players.map((player, index) => (
+                    <ModernPlayerCard
+                      key={player.id}
+                      player={player}
+                      index={index}
+                    />
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="no-players"
+                  className="text-center py-16"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="glass-morphism rounded-3xl p-12 max-w-md mx-auto">
+                    <div className="text-6xl mb-4">👥</div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      No se encontraron jugadores
+                    </h3>
+                    <p className="text-white/70">
+                      No hay jugadores que coincidan con los filtros aplicados.
+                    </p>
+                    <motion.button
+                      className="mt-4 px-6 py-2 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-400/30 hover:bg-blue-500/30 transition-colors"
+                      onClick={() => {
+                        setSearch('');
+                        setPosition('all');
+                        setActiveOnly(true);
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Limpiar filtros
+                    </motion.button>
                   </div>
-
-                  {/* Name and Nickname */}
-                  <h3 className="font-semibold text-lg mb-1">{player.fullName}</h3>
-                  {player.nickname && (
-                    <p className="text-gray-600 mb-2">"{player.nickname}"</p>
-                  )}
-
-                  {/* Position and Dorsal */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge className={getPositionColor(player.position)}>
-                      {getPositionName(player.position)}
-                    </Badge>
-                    {player.dorsal && (
-                      <Badge variant="outline">
-                        #{player.dorsal}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Status */}
-                  <div className="mb-4">
-                    <Badge variant={player.isActive ? "default" : "secondary"}>
-                      {player.isActive ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </div>
-
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-3 gap-4 w-full mb-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold text-blue-600">{player.stats.appearances}</div>
-                      <div className="text-xs text-gray-500">Partidos</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-green-600">{player.stats.goals}</div>
-                      <div className="text-xs text-gray-500">Goles</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-purple-600">{player.stats.assists}</div>
-                      <div className="text-xs text-gray-500">Asistencias</div>
-                    </div>
-                  </div>
-
-                  {/* View Profile Button */}
-                  <Button asChild className="w-full">
-                    <Link href={`/players/${player.id}`}>Ver Perfil</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
         </div>
-      )}
-
-      {!loading && players.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          No se encontraron jugadores con los filtros aplicados.
-        </div>
-      )}
+      </section>
     </div>
   );
 }

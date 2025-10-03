@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,10 +15,6 @@ export async function POST(request: NextRequest) {
 
     const { players, matches, appearances } = await request.json();
 
-    console.log('Received data:', { playersCount: players.length, matchesCount: matches.length, appearancesCount: appearances.length });
-    console.log('Sample player:', players[0]);
-    console.log('Sample match:', matches[0]);
-    console.log('Sample appearance:', appearances[0]);
 
     // Process in transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -46,6 +40,8 @@ export async function POST(request: NextRequest) {
               joinedAt: playerData.joinedAt ? new Date(playerData.joinedAt) : existingPlayer.joinedAt,
               isActive: playerData.isActive === 'true' || playerData.isActive === true,
               photoUrl: playerData.photoUrl || existingPlayer.photoUrl,
+              birthDate: playerData.birthDate ? new Date(playerData.birthDate) : existingPlayer.birthDate,
+              bio: playerData.bio || existingPlayer.bio,
             }
           });
           playersUpdated++;
@@ -59,6 +55,8 @@ export async function POST(request: NextRequest) {
               joinedAt: playerData.joinedAt ? new Date(playerData.joinedAt) : new Date(),
               isActive: playerData.isActive === 'true' || playerData.isActive === true,
               photoUrl: playerData.photoUrl,
+              birthDate: playerData.birthDate ? new Date(playerData.birthDate) : null,
+              bio: playerData.bio || null,
             }
           });
           playersCreated++;
@@ -67,7 +65,6 @@ export async function POST(request: NextRequest) {
 
       // Process matches
       for (const matchData of matches) {
-        console.log('Processing match:', matchData);
         const matchDate = new Date(matchData.date);
         if (isNaN(matchDate.getTime())) {
           throw new Error(`Invalid date in matches CSV: ${matchData.date}`);
@@ -76,8 +73,7 @@ export async function POST(request: NextRequest) {
         // Find or create tournament
         let tournament = await tx.tournament.findFirst({
           where: {
-            name: matchData.tournament,
-            season: matchData.season
+            name: matchData.tournament
           }
         });
 
@@ -85,8 +81,7 @@ export async function POST(request: NextRequest) {
           tournament = await tx.tournament.create({
             data: {
               name: matchData.tournament,
-              season: matchData.season,
-              organizer: matchData.organizer,
+              organizer: matchData.organizer || null,
             }
           });
           tournamentsCreated++;
@@ -119,7 +114,6 @@ export async function POST(request: NextRequest) {
 
       // Process appearances
       for (const appearanceData of appearances) {
-        console.log('Processing appearance:', appearanceData);
         const matchDate = new Date(appearanceData.matchDate);
         if (isNaN(matchDate.getTime())) {
           throw new Error(`Invalid date in appearances CSV: ${appearanceData.matchDate}`);
@@ -152,12 +146,10 @@ export async function POST(request: NextRequest) {
             matchId: match.id,
             playerId: player.id,
             isStarter: appearanceData.isStarter === 'true' || appearanceData.isStarter === true,
-            minutes: appearanceData.minutes ? parseInt(appearanceData.minutes) : null,
             goals: parseInt(appearanceData.goals) || 0,
             assists: appearanceData.assists ? parseInt(appearanceData.assists) : 0,
             yellow: appearanceData.yellow === 'true' || appearanceData.yellow === true,
             red: appearanceData.red === 'true' || appearanceData.red === true,
-            motm: appearanceData.motm === 'true' || appearanceData.motm === true,
           }
         });
         appearancesCreated++;

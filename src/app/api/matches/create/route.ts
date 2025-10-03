@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,7 +40,6 @@ export async function POST(request: NextRequest) {
         tournament = await tx.tournament.findFirst({
           where: {
             name: matchData.tournament,
-            season: matchData.season,
           },
         });
 
@@ -50,7 +47,6 @@ export async function POST(request: NextRequest) {
           tournament = await tx.tournament.create({
             data: {
               name: matchData.tournament,
-              season: matchData.season,
             },
           });
         }
@@ -83,13 +79,11 @@ export async function POST(request: NextRequest) {
             data: {
               matchId: match.id,
               playerId: playerStat.playerId,
-              isStarter: playerStat.isStarter || false,
-              minutes: playerStat.minutes || null,
+              isStarter: playerStat.played || false,
               goals: playerStat.goals || 0,
               assists: playerStat.assists || 0,
               yellow: playerStat.yellow || false,
               red: playerStat.red || false,
-              motm: playerStat.motm || false,
             },
           });
         })

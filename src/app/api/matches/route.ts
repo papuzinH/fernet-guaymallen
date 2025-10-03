@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const tournament = searchParams.get('tournament');
-    const season = searchParams.get('season');
     const result = searchParams.get('result');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
 
     const where: any = {};
     if (tournament) where.tournament = { name: tournament };
-    if (season) where.tournament = { ...where.tournament, season };
     if (result) where.result = result;
 
     const total = await prisma.match.count({ where });
@@ -23,7 +19,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         tournament: {
-          select: { name: true, season: true }
+          select: { name: true, organizer: true }
         }
       },
       orderBy: { date: 'desc' },

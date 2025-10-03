@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request) {
   try {
@@ -16,18 +14,25 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, season, organizer } = body;
-    if (!name || !season) {
-      return NextResponse.json({ error: 'name and season are required' }, { status: 400 });
+    const { name, organizer } = body;
+    
+    if (!name) {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 });
     }
 
     const tournament = await prisma.tournament.create({
-      data: { name, season, organizer },
+      data: { 
+        name: name.trim(),
+        organizer: organizer?.trim() || null
+      },
     });
 
     return NextResponse.json(tournament, { status: 201 });
   } catch (error) {
     console.error('POST /api/tournaments error', error);
-    return NextResponse.json({ error: 'Error creating tournament' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error creating tournament',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

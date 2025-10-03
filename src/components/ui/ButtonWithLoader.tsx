@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './button';
-import Loader from './Loader';
+import Loader from './modern-loader';
 
 type Props = React.ComponentProps<typeof Button> & {
   loading?: boolean;
